@@ -443,17 +443,26 @@ def _get_variable_name_from_standard_name(
             return str(variable_name)
     return None
 
+def _hotfix_wrap_to_int(x, dtype):
+    if numpy.dtype(dtype) == numpy.dtype(numpy.int16):
+        return min(max(x, -32_768), 32_767)
+    if numpy.dtype(dtype) == numpy.dtype(numpy.int32):
+        return min(max(x, -2_147_483_648), 2_147_483_647)
+    if numpy.dtype(dtype) == numpy.dtype(numpy.int64):
+        return min(max(x, -9_223_372_036_854_775_808), 9_223_372_036_854_775_807)
+    return x
 
 def _cast_valid_minmax_to_variable_dtype(
     dataset: xarray.Dataset, variable: str
 ) -> xarray.Dataset:
+    dtype = dataset[variable].encoding["dtype"]
     dataset[variable].attrs["valid_min"] = numpy.array(
-        [dataset[variable].attrs["valid_min"]],
-        dtype=dataset[variable].encoding["dtype"],
+        [_hotfix_wrap_to_int(dataset[variable].attrs["valid_min"], dtype)],
+        dtype=dtype,
     )[0]
     dataset[variable].attrs["valid_max"] = numpy.array(
-        [dataset[variable].attrs["valid_max"]],
-        dtype=dataset[variable].encoding["dtype"],
+        [_hotfix_wrap_to_int(dataset[variable].attrs["valid_max"], dtype)],
+        dtype=dtype,
     )[0]
     return dataset
 
